@@ -31,10 +31,12 @@ if [ "$FLAVOR" = "lite" ]; then
     # LITE flavor support android 16+
     ARM_SYSROOT=$NDK/platforms/android-16/arch-arm/
     X86_SYSROOT=$NDK/platforms/android-16/arch-x86/
+    UNIFIED_ANDROID_API=16
 else 
     # FULL flavor require android 21 at minimum (because of including openssl)
     ARM_SYSROOT=$NDK/platforms/android-21/arch-arm/
     X86_SYSROOT=$NDK/platforms/android-21/arch-x86/
+    UNIFIED_ANDROID_API=21
 fi
 ARM_PREBUILT=$NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/$OS
 X86_PREBUILT=$NDK/toolchains/x86-4.9/prebuilt/$OS
@@ -54,6 +56,13 @@ X86_64_PREBUILT=$NDK/toolchains/x86_64-4.9/prebuilt/$OS
 # MIPS64_SYSROOT=$NDK/platforms/android-21/arch-mips64/
 # MIPS64_PREBUILT=$NDK/toolchains/mips64el-linux-android-4.9/prebuilt/darwin-x86_64
 # MIPS64_CROSS_PREFIX=$MIPS64_PREBUILT/bin/$HOST-
+
+# For unified headers https://android.googlesource.com/platform/ndk/+/ndk-release-r16/docs/UnifiedHeaders.md
+UNIFIED_INCLUDEPATH=$NDK/sysroot/usr/include
+ARM_UNIFIED_INCLUDEPATH=$NDK/sysroot/usr/include/arm-linux-androideabi
+X86_UNIFIED_INCLUDEPATH=$NDK/sysroot/usr/include/i686-linux-android
+ARM64_UNIFIED_INCLUDEPATH=$NDK/sysroot/usr/include/aarch64-linux-android
+X86_64_UNIFIED_INCLUDEPATH=$NDK/sysroot/usr/include/x86_64-linux-android
 
 if [ "$FFMPEG_VERSION" = "" ]; then
     FFMPEG_VERSION="3.3.2"
@@ -182,21 +191,25 @@ then
     HOST=arm-linux-androideabi
     CROSS_PREFIX=$ARM_PREBUILT/bin/$HOST-
     OPTIMIZE_CFLAGS="$OPTIMIZE_CFLAGS "
+    UNIFIED_INCLUDEPATH_ARCH=$ARM_UNIFIED_INCLUDEPATH
 elif [ $ARCH == "arm64" ]
 then
     SYSROOT=$ARM64_SYSROOT
     HOST=aarch64-linux-android
     CROSS_PREFIX=$ARM64_PREBUILT/bin/$HOST-
+    UNIFIED_INCLUDEPATH_ARCH=$ARM64_UNIFIED_INCLUDEPATH
 elif [ $ARCH == "x86_64" ]
 then
     SYSROOT=$X86_64_SYSROOT
     HOST=x86_64-linux-android
     CROSS_PREFIX=$X86_64_PREBUILT/bin/$HOST-
+    UNIFIED_INCLUDEPATH_ARCH=$X86_64_UNIFIED_INCLUDEPATH
 elif [ $ARCH == "i686" ]
 then
     SYSROOT=$X86_SYSROOT
     HOST=i686-linux-android
     CROSS_PREFIX=$X86_PREBUILT/bin/$HOST-
+    UNIFIED_INCLUDEPATH_ARCH=$X86_UNIFIED_INCLUDEPATH
 # elif [ $ARCH == "mips" ]
 # then
 #     SYSROOT=$MIPS_SYSROOT
@@ -219,9 +232,9 @@ export AR="${CROSS_PREFIX}ar"
 export NM="${CROSS_PREFIX}nm"
 export RANLIB="${CROSS_PREFIX}ranlib"
 export LDFLAGS="-L$PREFIX/lib -fPIE -pie "
-export CFLAGS="$OPTIMIZE_CFLAGS -I$PREFIX/include --sysroot=$SYSROOT -fPIE "
+export CFLAGS="$OPTIMIZE_CFLAGS -I$PREFIX/include --sysroot=$SYSROOT -fPIE -isystem $UNIFIED_INCLUDEPATH -isystem $UNIFIED_INCLUDEPATH_ARCH -D__ANDROID_API__=$UNIFIED_ANDROID_API "
 export CXXFLAGS="$CFLAGS "
-export CPPFLAGS="--sysroot=$SYSROOT "
+export CPPFLAGS="--sysroot=$SYSROOT -isystem $UNIFIED_INCLUDEPATH -isystem $UNIFIED_INCLUDEPATH_ARCH -D__ANDROID_API__=$UNIFIED_ANDROID_API "
 export STRIP=${CROSS_PREFIX}strip
 export PATH="$PATH:$PREFIX/bin/"
 
